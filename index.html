@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Segment Slope Quiz</title>
+  </head>
+  <body>
+    <div style="max-width:600px;margin:0 auto;text-align:center;">
+      <h1>Segment Slope Quiz</h1>
+      <canvas id="grid" width="400" height="400" style="background:#f8f8f8;border:1px solid #ccc;"></canvas>
+      <div id="endpoints" style="margin:20px 0;"></div>
+      <form id="slopeForm" style="margin-top:10px;">
+        <label>Slope (fraction):
+          <input type="text" id="slopeInput" placeholder="e.g. 3/4 or -2/5" style="margin-left:8px;" />
+        </label>
+        <button type="submit" style="margin-left:8px;">Submit</button>
+      </form>
+      <div style="color:#555;font-size:14px;margin-top:4px;">* Answer must be a reduced fraction (e.g. 2/4 → 1/2)</div>
+      <div id="feedback" style="margin:10px;font-weight:bold;"></div>
+      <button id="newSegment" style="display:none;">New Segment</button>
+    </div>
+    <script>
+      function getRandomCoord() {
+        return [
+          Math.floor(Math.random() * 21) - 10,
+          Math.floor(Math.random() * 21) - 10
+        ];
+      }
+      function getNewSegment() {
+        let a = getRandomCoord();
+        let b = getRandomCoord();
+        while (a[0] === b[0]) b = getRandomCoord();
+        return [a, b];
+      }
+      function gcd(x, y) {
+        return y === 0 ? Math.abs(x) : gcd(y, x % y);
+      }
+      function getSlope([a, b]) {
+        const dy = b[1] - a[1];
+        const dx = b[0] - a[0];
+        const g = gcd(dy, dx);
+        return `${dy/g}/${dx/g}`;
+      }
+      function coordToCanvas([x, y]) {
+        const size = 400, pad = 40, min = -10, max = 10;
+        const step = (size - 2 * pad) / (max - min);
+        // (0,0) should be at center
+        return [pad + (x - min) * step, pad + (max - y) * step];
+      }
+      function drawGrid(segment) {
+        const canvas = document.getElementById('grid');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 400, 400);
+        const size = 400, pad = 40, min = -10, max = 10;
+        const step = (size - 2 * pad) / (max - min);
+        // Draw grid lines
+        ctx.strokeStyle = '#eee';
+        for (let i = min; i <= max; i++) {
+          let [x, y0] = coordToCanvas([i, min]);
+          let [, y1] = coordToCanvas([i, max]);
+          ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+          let [x0, y] = coordToCanvas([min, i]);
+          let [x1, ] = coordToCanvas([max, i]);
+          ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+        }
+        // Axes (cross at center)
+        ctx.strokeStyle = 'black'; ctx.lineWidth = 2;
+        // x-axis
+        let [x0, y0] = coordToCanvas([min, 0]);
+        let [x1, y1] = coordToCanvas([max, 0]);
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        // y-axis
+        [x0, y0] = coordToCanvas([0, min]);
+        [x1, y1] = coordToCanvas([0, max]);
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        // Ticks and labels
+        ctx.font = '12px Arial'; ctx.fillStyle = '#333';
+        for (let i = min; i <= max; i++) {
+          // x-axis ticks
+          let [x, y] = coordToCanvas([i, 0]);
+          ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.stroke();
+          ctx.fillText(i, x, y + 18);
+          // y-axis ticks
+          [x, y] = coordToCanvas([0, i]);
+          ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.lineTo(x + 5, y); ctx.stroke();
+          if (i !== 0) ctx.fillText(i, x - 18, y + 4);
+        }
+        // Segment
+        const [a, b] = segment;
+        const [ax, ay] = coordToCanvas(a), [bx, by] = coordToCanvas(b);
+        ctx.strokeStyle = 'red'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+        // Endpoints
+        ctx.fillStyle = 'blue';
+        ctx.beginPath(); ctx.arc(ax, ay, 6, 0, 2 * Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.arc(bx, by, 6, 0, 2 * Math.PI); ctx.fill();
+      }
+      let segment = getNewSegment();
+      let slope = getSlope(segment);
+      function updateUI() {
+        drawGrid(segment);
+        document.getElementById('endpoints').textContent = `Endpoints: (${segment[0][0]}, ${segment[0][1]}) and (${segment[1][0]}, ${segment[1][1]})`;
+        document.getElementById('feedback').textContent = '';
+        document.getElementById('slopeInput').value = '';
+        document.getElementById('slopeInput').disabled = false;
+        document.getElementById('newSegment').style.display = 'none';
+      }
+      updateUI();
+      document.getElementById('slopeForm').onsubmit = function(e){
+        e.preventDefault();
+        const ans = document.getElementById('slopeInput').value.replace(/\s/g,'');
+        if(ans === slope){
+          document.getElementById('feedback').textContent = 'Correct!';
+          document.getElementById('slopeInput').disabled = true;
+          document.getElementById('newSegment').style.display = '';
+        }else{
+          document.getElementById('feedback').textContent = 'Try again.';
+        }
+      };
+      document.getElementById('newSegment').onclick = function(){
+        segment = getNewSegment();
+        slope = getSlope(segment);
+        updateUI();
+      };
+    </script>
+  </body>
+</html>
